@@ -1,0 +1,1974 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Scan Pairing">
+  <title>Scan Pairing - Inventory Malilkids</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal:        #1D9E75;
+      --teal-light:  #E1F5EE;
+      --teal-dark:   #0F6E56;
+      --teal-glow:   rgba(29,158,117,0.18);
+      --red:         #E24B4A;
+      --red-light:   #FCEBEB;
+      --amber:       #BA7517;
+      --amber-light: #FAEEDA;
+      --gray-50:     #F8F8F6;
+      --gray-100:    #F0EFEA;
+      --gray-200:    #D3D1C7;
+      --gray-400:    #888780;
+      --gray-600:    #5F5E5A;
+      --gray-900:    #1A1A18;
+      --white:       #FFFFFF;
+      --border:      #E0DED6;
+      --radius-sm:   8px;
+      --radius-md:   14px;
+      --radius-lg:   20px;
+      --shadow-sm:   0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md:   0 4px 16px rgba(0,0,0,0.09), 0 2px 4px rgba(0,0,0,0.04);
+      --font:        'DM Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      --mono:        'DM Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+    html, body {
+      height: 100%;
+      font-family: var(--font);
+      background: var(--gray-50);
+      color: var(--gray-900);
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+    }
+
+    #scan-inp {
+      position: fixed;
+      top: -200px;
+      left: -200px;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 16px;
+    }
+
+    .app { min-height: 100vh; display: flex; flex-direction: column; }
+
+    .screen { display: none; flex: 1; flex-direction: column; }
+    .screen.active { display: flex; }
+
+    .cfg-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 2rem 1.25rem 3rem;
+      max-width: 480px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .cfg-logo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .cfg-logo .icon {
+      width: 64px;
+      height: 64px;
+      border-radius: var(--radius-md);
+      background: var(--teal-light);
+      border: 2px solid var(--teal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      box-shadow: 0 0 0 6px rgba(29,158,117,0.08);
+    }
+
+    .cfg-logo h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; }
+    .cfg-logo p  { font-size: 14px; color: var(--gray-400); margin-top: 4px; }
+
+    .field { margin-bottom: 14px; }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-600);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="url"],
+    input[type="password"] {
+      display: block;
+      width: 100%;
+      padding: 13px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-family: var(--font);
+      color: var(--gray-900);
+      background: var(--white);
+      transition: border-color 0.15s, box-shadow 0.15s;
+      -webkit-appearance: none;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px var(--teal-glow);
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-weight: 700;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      letter-spacing: -0.1px;
+    }
+
+    .btn:active { transform: scale(0.98); opacity: 0.88; }
+    .btn-primary   { background: var(--teal); color: #fff; }
+    .btn-secondary { background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--border); font-weight: 500; }
+    .btn-small     { display: inline-block; width: auto; padding: 8px 14px; font-size: 13px; font-weight: 600; }
+
+    .help-toggle {
+      font-size: 12px; font-weight: 400; color: var(--teal);
+      cursor: pointer; margin-left: 6px; text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .help-panel {
+      display: none; background: var(--gray-100); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 14px; font-size: 12.5px;
+      line-height: 1.75; color: var(--gray-600); margin-top: 8px;
+    }
+
+    .help-panel.open { display: block; }
+
+    .step-title { font-size: 13px; font-weight: 700; color: var(--gray-900); margin: 10px 0 4px; }
+    .step-title:first-child { margin-top: 0; }
+
+    .code-block {
+      background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 12px; font-family: var(--mono); font-size: 11px; line-height: 1.6;
+      white-space: pre; overflow-x: auto; color: var(--gray-900); margin: 6px 0;
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute; top: 8px; right: 8px; padding: 4px 10px; font-size: 11px;
+      font-weight: 500; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--white); color: var(--gray-600); cursor: pointer;
+      font-family: var(--font); transition: background 0.15s;
+    }
+
+    .copy-btn:hover { background: var(--gray-100); }
+    .copy-btn.copied { color: var(--teal); border-color: var(--teal); }
+
+    .scan-header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .operator-name { font-size: 15px; font-weight: 700; color: var(--gray-900); }
+    .conn-status   { font-size: 11.5px; color: var(--gray-400); margin-top: 2px; line-height: 1.4; }
+
+    .scan-header-right { display: flex; align-items: center; gap: 8px; }
+
+    .badge {
+      font-size: 12px; font-weight: 600; background: var(--gray-100);
+      color: var(--gray-600); padding: 5px 11px; border-radius: 20px;
+      border: 1px solid var(--border); transition: all 0.2s;
+    }
+
+    .icon-btn {
+      width: 36px; height: 36px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); background: var(--white);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--gray-600); -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s;
+    }
+
+    .icon-btn:active { background: var(--gray-100); }
+
+    .scan-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 14px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .resi-card {
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .resi-card.locked {
+      border-color: var(--teal);
+      background: linear-gradient(135deg, #fff 0%, #f0fdf8 100%);
+      box-shadow: 0 0 0 3px rgba(29,158,117,0.08), var(--shadow-sm);
+    }
+
+    .card-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+      color: var(--gray-400); text-transform: uppercase; margin-bottom: 8px;
+    }
+
+    .resi-value {
+      font-family: var(--mono);
+      font-size: clamp(18px, 5vw, 26px);
+      font-weight: 600;
+      color: var(--gray-300);
+      line-height: 1.2;
+      word-break: break-all;
+      transition: color 0.2s;
+    }
+
+    .resi-value.active { color: var(--gray-900); }
+
+    .resi-sub { font-size: 12px; color: var(--gray-400); margin-top: 5px; }
+    .resi-sub.has-data { color: var(--teal); font-weight: 600; }
+
+    .resi-badge {
+      display: none;
+      font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+      background: var(--teal-light); color: var(--teal-dark); margin-top: 6px;
+      letter-spacing: 0.02em;
+    }
+
+    .scan-zone {
+      position: relative;
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px 16px 16px;
+      cursor: default;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.15s, border-color 0.15s, background 0.15s;
+      overflow: hidden;
+    }
+
+    .scan-beam { display: none; }
+    .scan-zone::before, .scan-zone::after { display: none; }
+
+    .scan-zone-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+      color: var(--teal); text-transform: uppercase; margin-bottom: 10px;
+    }
+
+    .scan-live-wrap {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+    }
+
+    .scan-live {
+      font-family: var(--mono);
+      font-size: clamp(20px, 5.5vw, 28px);
+      font-weight: 600;
+      color: var(--gray-900);
+      letter-spacing: 0;
+      word-break: break-all;
+      line-height: 1.2;
+    }
+
+    .scan-live:empty::before {
+      content: attr(data-placeholder);
+      color: var(--gray-200);
+      font-weight: 500;
+      font-size: clamp(14px, 4vw, 18px);
+    }
+
+    .scan-cursor { display: none; }
+
+    .scan-zone-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .scan-message {
+      font-size: 13px; color: var(--gray-400); flex: 1;
+    }
+
+    .scan-message.ok  { color: var(--teal);  font-weight: 600; }
+    .scan-message.err { color: var(--red);   font-weight: 600; }
+
+    .scanner-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--gray-600);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--gray-50);
+      flex-shrink: 0;
+    }
+
+    .scanner-status.active {
+      color: var(--teal-dark);
+      border-color: rgba(29,158,117,0.24);
+      background: var(--teal-light);
+    }
+
+    .scanner-status.lost {
+      color: var(--red);
+      border-color: rgba(226,75,74,0.22);
+      background: var(--red-light);
+    }
+
+    .focus-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--teal);
+      flex-shrink: 0;
+    }
+
+    .focus-dot.lost { background: var(--red); }
+
+    .prod-section { display: none; }
+    .prod-section.visible { display: block; }
+
+    .section-title {
+      font-size: 11px; font-weight: 700; color: var(--gray-400);
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;
+    }
+
+    .prod-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .prod-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 14px; background: var(--white);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .prod-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); flex-shrink: 0; margin-top: 8px; }
+
+    .prod-body { flex: 1; min-width: 0; }
+
+    .prod-main {
+      display: flex; align-items: baseline; gap: 10px;
+      justify-content: space-between;
+    }
+
+    .prod-code { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--gray-900); flex: 1; word-break: break-all; }
+
+    .prod-time { font-size: 11px; color: var(--gray-400); flex-shrink: 0; }
+
+    .prod-meta {
+      margin-top: 6px; font-size: 11.5px; color: var(--gray-600);
+      line-height: 1.5; display: flex; flex-wrap: wrap; gap: 6px 10px;
+    }
+
+    .parse-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 999px;
+      background: var(--gray-100); border: 1px solid var(--border);
+      font-size: 11px; font-weight: 600;
+    }
+
+    .parse-chip.ok {
+      background: var(--teal-light); color: var(--teal-dark); border-color: rgba(29,158,117,0.28);
+    }
+
+    .parse-chip.err {
+      background: var(--red-light); color: var(--red); border-color: rgba(226,75,74,0.22);
+    }
+
+    .log-section { padding-bottom: 2rem; }
+
+    .log-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+
+    .log-note {
+      font-size: 11px;
+      color: var(--gray-400);
+    }
+
+    .log-list { display: flex; flex-direction: column; gap: 5px; }
+
+    .log-item {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 10px 12px; background: var(--white);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 12px;
+    }
+
+    .log-time { color: var(--gray-400); flex-shrink: 0; min-width: 40px; font-family: var(--mono); font-size: 11px; }
+
+    .log-resi {
+      font-family: var(--mono); font-weight: 600; color: var(--teal-dark);
+      max-width: 110px; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; flex-shrink: 0;
+    }
+
+    .log-arrow { color: var(--gray-200); flex-shrink: 0; }
+
+    .log-body { min-width: 0; flex: 1; }
+
+    .log-main {
+      display: flex; gap: 8px; align-items: center;
+      min-width: 0;
+    }
+
+    .log-prod {
+      font-family: var(--mono); color: var(--gray-900);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      min-width: 0;
+    }
+
+    .log-meta {
+      margin-top: 4px; color: var(--gray-600); font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .log-empty {
+      text-align: center; padding: 2.5rem 1rem; color: var(--gray-400);
+      font-size: 14px; border: 1.5px dashed var(--border); border-radius: var(--radius-md);
+    }
+
+    .drawer-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4); z-index: 100;
+    }
+
+    .drawer-overlay.open { display: block; }
+
+    .drawer {
+      position: fixed; top: 0; right: 0; height: 100%;
+      width: min(300px, 88vw); background: var(--white); z-index: 101;
+      padding: 20px 16px; transform: translateX(100%);
+      transition: transform 0.25s ease; overflow-y: auto;
+    }
+
+    .drawer.open { transform: translateX(0); }
+
+    .drawer-title {
+      font-size: 16px; font-weight: 700; color: var(--gray-900);
+      margin-bottom: 20px; display: flex; align-items: center;
+      justify-content: space-between;
+    }
+
+    .drawer-section { margin-bottom: 20px; }
+
+    .drawer-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+      color: var(--gray-400); text-transform: uppercase; margin-bottom: 8px;
+    }
+
+    .drawer-info { font-size: 13px; color: var(--gray-600); line-height: 1.6; white-space: pre-line; }
+
+    .drawer-btn {
+      display: flex; align-items: center; gap: 10px; padding: 12px;
+      border-radius: var(--radius-sm); border: 1px solid var(--border);
+      background: var(--white); cursor: pointer; width: 100%;
+      font-size: 14px; font-family: var(--font); color: var(--gray-900);
+      margin-bottom: 8px; transition: background 0.15s; text-align: left;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .drawer-btn:active { background: var(--gray-100); }
+    .drawer-btn.danger { color: var(--red); border-color: var(--red-light); }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 200;
+      align-items: flex-end; justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal-sheet {
+      background: var(--white);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      width: 100%; max-width: 560px; max-height: 88vh;
+      display: flex; flex-direction: column;
+      padding: 20px 16px 40px;
+      animation: slideUp 0.25s ease;
+    }
+
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+    .modal-title {
+      font-size: 16px; font-weight: 700; color: var(--gray-900);
+      margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .modal-subtitle { font-size: 12px; color: var(--gray-400); margin-bottom: 16px; }
+
+    .courier-list {
+      overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px;
+    }
+
+    .courier-item {
+      display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+      background: var(--gray-50); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    }
+
+    .ci-prefix {
+      font-family: var(--mono); font-size: 13px; font-weight: 700;
+      color: var(--teal-dark); background: var(--teal-light); border-radius: 6px;
+      padding: 3px 8px; min-width: 52px; text-align: center; flex-shrink: 0;
+    }
+
+    .ci-name { flex: 1; font-size: 13px; color: var(--gray-900); }
+
+    .ci-del {
+      border: none; background: none; color: var(--gray-400); cursor: pointer;
+      font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: 4px;
+      transition: color 0.15s, background 0.15s; flex-shrink: 0;
+    }
+
+    .ci-del:hover, .ci-del:active { color: var(--red); background: var(--red-light); }
+
+    .add-courier-row { display: flex; gap: 8px; align-items: stretch; }
+
+    .add-courier-row input { padding: 10px 12px; font-size: 14px; }
+
+    .add-courier-row .inp-prefix  { width: 90px; flex-shrink: 0; font-family: var(--mono); }
+    .add-courier-row .inp-name    { flex: 1; }
+
+    .btn-add-ci {
+      background: var(--teal); color: #fff; border: none;
+      border-radius: var(--radius-sm); padding: 10px 16px;
+      font-size: 22px; cursor: pointer; flex-shrink: 0; transition: opacity 0.15s;
+    }
+
+    .btn-add-ci:active { opacity: 0.8; }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes flashOk {
+      0%, 100% { border-color: var(--border); background: var(--white); }
+      40%       { border-color: var(--teal); background: #F4FCF8; box-shadow: 0 0 0 4px rgba(29,158,117,0.12); }
+    }
+
+    @keyframes flashErr {
+      0%, 100% { border-color: var(--border); background: var(--white); }
+      40%       { border-color: var(--red); background: #FFF7F7; box-shadow: 0 0 0 4px rgba(226,75,74,0.1); }
+    }
+
+    .flash-ok  { animation: flashOk  0.4s ease; }
+    .flash-err { animation: flashErr 0.4s ease; }
+
+    .toast {
+      position: fixed; bottom: 28px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--gray-900); color: #fff; font-size: 13px; font-weight: 600;
+      padding: 11px 20px; border-radius: 24px; z-index: 300;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      opacity: 0; white-space: nowrap; pointer-events: none;
+      box-shadow: var(--shadow-md);
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    @media (min-width: 600px) {
+      .scan-body   { padding: 20px 24px 32px; }
+      .scan-header { padding: 14px 24px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <input id="scan-inp"
+    type="text"
+    inputmode="none"
+    autocomplete="off"
+    autocorrect="off"
+    autocapitalize="characters"
+    spellcheck="false"
+    aria-hidden="true"
+    tabindex="-1">
+
+  <!-- SCREEN 1 — CONFIG -->
+  <div id="scr-cfg" class="screen active">
+    <div class="cfg-wrap">
+      <div class="cfg-logo">
+        <div class="icon">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="5" height="5" rx="1"/>
+            <rect x="16" y="3" width="5" height="5" rx="1"/>
+            <rect x="3" y="16" width="5" height="5" rx="1"/>
+            <path d="M16 16h5v5M16 16v5M21 16v.01"/>
+            <path d="M8 3v18M3 8h18"/>
+          </svg>
+        </div>
+        <h1>Scan Pairing</h1>
+        <p>Sistem pasangan kode produksi &amp; resi</p>
+      </div>
+
+      <div class="field">
+        <label for="inp-op">Nama Operator</label>
+        <input id="inp-op" type="text" placeholder="Masukkan nama Anda..." autocomplete="name">
+      </div>
+
+      <div class="field">
+        <label for="inp-url">
+          Google Apps Script URL
+          <span class="help-toggle" id="btn-help">lihat panduan</span>
+        </label>
+        <input id="inp-url" type="url" placeholder="https://script.google.com/macros/s/...">
+        <div style="font-size:12px;color:var(--gray-400);margin-top:5px">
+          Kosongkan untuk mode offline (data hanya tersimpan lokal &amp; bisa diexport CSV)
+        </div>
+
+        <div class="help-panel" id="help-panel">
+          <div class="step-title">Langkah 1 — Buka Apps Script</div>
+          <div>Buka Google Sheets Anda, klik <strong>Extensions</strong> → <strong>Apps Script</strong>. Hapus semua kode, tempel kode berikut:</div>
+          <div style="position:relative;margin-top:6px">
+            <div class="code-block" id="gas-code-block"></div>
+            <button class="copy-btn" id="copy-btn" onclick="copyCode()">Salin</button>
+          </div>
+
+          <div class="step-title">Langkah 2 — Deploy sebagai Web App</div>
+          <div>Klik <strong>Deploy</strong> → <strong>New deployment</strong> → pilih type <strong>Web app</strong>.<br>
+            • Execute as: <em>Me</em><br>
+            • Who has access: <em>Anyone</em><br>
+            Klik <strong>Deploy</strong>, izinkan akses, salin URL-nya.</div>
+
+          <div class="step-title">Langkah 3 — Tempel URL</div>
+          <div>Tempel URL di kolom di atas. Data tersimpan ke sheet <strong>ScanLog</strong> otomatis.</div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="startApp()" style="margin-top:8px">Mulai Scan</button>
+
+      <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--gray-400)">
+        Konfigurasi tersimpan otomatis di browser ini
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2 — SCAN -->
+  <div id="scr-main" class="screen">
+
+    <div class="scan-header">
+      <div>
+        <div class="operator-name" id="hdr-op">—</div>
+        <div class="conn-status" id="hdr-conn">—</div>
+      </div>
+      <div class="scan-header-right">
+        <div class="badge" id="hdr-count">0 data</div>
+        <button class="icon-btn" onclick="openDrawer()" title="Menu">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <line x1="3" y1="7" x2="21" y2="7"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="17" x2="21" y2="17"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="scan-body">
+
+      <div class="resi-card" id="resi-card">
+        <div class="card-label">Kode Resi / Pesanan</div>
+        <div class="resi-value" id="resi-val">— Belum discan —</div>
+        <div id="resi-badge" class="resi-badge"></div>
+        <div class="resi-sub" id="resi-sub"></div>
+      </div>
+
+      <div class="scan-zone" id="scan-zone">
+        <div class="scan-beam"></div>
+        <div class="scan-zone-label" id="scan-lbl">Scan Kode Resi</div>
+        <div class="scan-live-wrap">
+          <div class="scan-live" id="scan-live" data-placeholder="Scanner siap menerima barcode"></div>
+          <span class="scan-cursor" id="scan-cursor"></span>
+        </div>
+        <div class="scan-zone-footer">
+          <div class="scan-message" id="scan-msg">Menunggu scan...</div>
+          <div class="scanner-status active" id="scanner-status">
+            <span class="focus-dot" id="focus-dot"></span>
+            <span id="focus-text">Scanner aktif</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="prod-section" id="prod-section">
+        <div class="section-title">Produk di resi ini</div>
+        <div class="prod-list" id="prod-list"></div>
+      </div>
+
+      <div class="log-section">
+        <div class="log-header">
+          <div class="section-title" style="margin-bottom:0">Riwayat sesi ini</div>
+          <div class="log-note" id="log-limit-note"></div>
+        </div>
+        <div id="log-empty" class="log-empty">Belum ada data. Mulai scan! 🎯</div>
+        <div class="log-list" id="log-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MENU DRAWER -->
+  <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+  <div class="drawer" id="drawer">
+    <div class="drawer-title">
+      Menu
+      <button onclick="closeDrawer()" style="background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:22px;line-height:1;padding:2px 6px">&times;</button>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-label">Sesi Ini</div>
+      <div class="drawer-info" id="drawer-stats">0 data terscan</div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-label">Aksi</div>
+      <button class="drawer-btn" onclick="doExport(); closeDrawer();">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
+      <button class="drawer-btn" onclick="syncQueue(); closeDrawer();">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        Sinkronkan Sekarang
+      </button>
+      <button class="drawer-btn" onclick="openCourierModal(); closeDrawer();">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h.01M11 8h6"/><path d="M7 12h.01M11 12h4"/></svg>
+        Kustomisasi Kode Ekspedisi
+      </button>
+      <button class="drawer-btn danger" onclick="if(confirm('Keluar dari sesi ini?')) backToCfg(); closeDrawer();">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Ganti Operator / Keluar
+      </button>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-label">Koneksi</div>
+      <div class="drawer-info" id="drawer-conn">—</div>
+      <button class="drawer-btn" style="margin-top:8px" onclick="pingGAS(); closeDrawer();">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        Test Koneksi
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- COURIER MODAL -->
+<div class="modal-overlay" id="courier-modal-overlay" onclick="if(event.target===this)closeCourierModal()">
+  <div class="modal-sheet">
+    <div class="modal-title">
+      Kode Unik Ekspedisi
+      <button onclick="closeCourierModal()" style="background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:24px;line-height:1">&times;</button>
+    </div>
+    <div class="modal-subtitle">Barcode yang diawali kode ini akan otomatis dikenali sebagai nomor resi.</div>
+    <div class="courier-list" id="courier-list"></div>
+    <div class="add-courier-row">
+      <input id="inp-prefix" class="inp-prefix" type="text" placeholder="Kode"
+        autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="10">
+      <input id="inp-courier-name" class="inp-name" type="text" placeholder="Nama Ekspedisi"
+        autocomplete="off" spellcheck="false">
+      <button class="btn-add-ci" onclick="addCourierEntry()" title="Tambah">+</button>
+    </div>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="saveCourierModal()">Simpan Perubahan</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const GAS_CODE = `function doPost(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('ScanLog') || ss.insertSheet('ScanLog');
+
+    if (sheet.getLastRow() === 0) {
+      var header = [
+        'ID',
+        'Event Type',
+        'Session ID',
+        'Status Resi',
+        'Timestamp',
+        'Timestamp ISO',
+        'Kode Resi',
+        'Kode Produksi',
+        'Jenis Produk',
+        'Tanggal Produksi',
+        'Tanggal Produksi ISO',
+        'Batch Produksi',
+        'Parser Key',
+        'Parse Valid',
+        'Parse Error',
+        'Operator'
+      ];
+      sheet.appendRow(header);
+      sheet.getRange(1, 1, 1, header.length)
+        .setFontWeight('bold')
+        .setBackground('#1D9E75')
+        .setFontColor('#FFFFFF');
+    }
+
+    var d = JSON.parse(e.postData.contents);
+    sheet.appendRow([
+      d.id || '',
+      d.eventType || 'PAIR',
+      d.sessionId || '',
+      d.resiStatus || '',
+      d.timestamp || '',
+      d.timestampIso || '',
+      d.kodeResi || '',
+      d.kodeProduksi || '',
+      d.jenisProduk || '',
+      d.tanggalProduksi || '',
+      d.tanggalProduksiIso || '',
+      d.batchProduksi || '',
+      d.parserKey || '',
+      d.parseValid || '',
+      d.parseError || '',
+      d.operator || ''
+    ]);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ status: 'ok', app: 'Scan Pairing API' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+
+document.getElementById('gas-code-block').textContent = GAS_CODE;
+
+// ─── DEFAULT COURIER CODES ───────────────────────────────────
+const DEFAULT_COURIERS = [
+  { prefix: "TS",   name: "Anteraja" },
+  { prefix: "JX",   name: "J&T" },
+  { prefix: "TK",   name: "ID Express" },
+  { prefix: "CM",   name: "JNE Reguler" },
+  { prefix: "LNCH", name: "JNE Lincah" },
+  { prefix: "570",  name: "J&T Cargo" },
+  { prefix: "IDE",  name: "ID Express" },
+  { prefix: "JO",   name: "J&T Lincah" },
+  { prefix: "LNID", name: "Ninja Lincah" },
+  { prefix: "SPX",  name: "Shopee Express" },
+  { prefix: "26",   name: "Shopee Express" },
+  { prefix: "TG",   name: "JNE TIKTOK" },
+  { prefix: "LXAD", name: "Lazada" }
+];
+
+function loadCouriers() {
+  try {
+    const s = localStorage.getItem('sp_couriers');
+    const raw = s ? JSON.parse(s) : [...DEFAULT_COURIERS];
+    return normalizeCourierList(raw);
+  } catch(e) { return normalizeCourierList([...DEFAULT_COURIERS]); }
+}
+
+function saveCouriers(list) {
+  localStorage.setItem('sp_couriers', JSON.stringify(normalizeCourierList(list)));
+}
+
+function normalizeCourierList(list) {
+  const map = new Map();
+  for (const item of Array.isArray(list) ? list : []) {
+    const prefix = String(item && item.prefix || '').trim().toUpperCase();
+    const name = String(item && item.name || '').trim();
+    if (!prefix || !name) continue;
+    map.set(prefix, { prefix, name });
+  }
+  return [...map.values()].sort((a, b) => b.prefix.length - a.prefix.length);
+}
+
+function getCourierMatch(val) {
+  const code = String(val || '').trim().toUpperCase();
+  if (!code) return null;
+  const list = loadCouriers();
+  for (const c of list) {
+    if (code.startsWith(c.prefix)) return c;
+  }
+  return null;
+}
+
+function detectCourier(val) {
+  const match = getCourierMatch(val);
+  return match ? match.name : null;
+}
+
+function validateResiCode(val) {
+  const match = getCourierMatch(val);
+  return {
+    isValid: Boolean(match),
+    match,
+    normalized: String(val || '').trim().toUpperCase()
+  };
+}
+
+// ─── STATE ─────────────────────────────────────────────────────
+const STRICT_PRODUCTION_VALIDATION = false;
+const LOG_LIMITS = { mobile: 6, tablet: 8, desktop: 12 };
+const FOCUS_WATCH_INTERVAL_MS = 700;
+const FOCUS_WARN_AFTER_MS = 1400;
+const PRODUCT_TYPE_LABELS = {
+  A: 'Anakkecilku',
+  M: 'Malilkids'
+};
+const PRODUCTION_CODE_PATTERNS = [
+  {
+    key: 'dash-yyyyMMdd',
+    label: 'JENIS-YYYYMMDD-BATCH',
+    dateMode: 'YYYYMMDD',
+    regex: /^(?<jenis>[A-Z0-9]{2,20})-(?<tanggal>\d{8})-(?<batch>[A-Z0-9]{2,20})$/
+  },
+  {
+    key: 'dash-yyMMdd',
+    label: 'JENIS-YYMMDD-BATCH',
+    dateMode: 'YYMMDD',
+    regex: /^(?<jenis>[A-Z0-9]{2,20})-(?<tanggal>\d{6})-(?<batch>[A-Z0-9]{2,20})$/
+  },
+  {
+    key: 'prefix-ddMMyy-batch',
+    label: 'M010426-BMTTCRBR-03',
+    dateMode: 'DDMMYY',
+    regex: /^(?<jenis>[A-Z]{1,6})(?<tanggal>\d{6})-(?<batch>[A-Z0-9-]{2,40})$/
+  }
+];
+
+let S = {
+  operator: '', gasUrl: '', pin: '',
+  mode: 'resi',
+  resi: null,
+  products: [],
+  log: [],
+  pendingQueue: [],
+  currentSessionId: null,
+  currentResiStartedAt: null,
+  lastSyncTime: null,
+  isSyncing: false,
+  autoSyncTimer: null
+};
+
+let _scanBuffer = '';
+let _audioCtx = null;
+let _focusWatchdog = null;
+let _scannerFocusLostAt = null;
+let _focusWarned = false;
+
+// ─── INIT ──────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const savedOp   = localStorage.getItem('sp_operator') || '';
+  const savedUrl  = localStorage.getItem('sp_gasurl')   || '';
+  const wasActive = localStorage.getItem('sp_active')   === '1';
+  if (savedOp)  document.getElementById('inp-op').value  = savedOp;
+  if (savedUrl) document.getElementById('inp-url').value = savedUrl;
+
+  if (wasActive && savedOp) {
+    S.operator = savedOp;
+    S.gasUrl   = savedUrl;
+    enterScanScreen();
+  }
+
+  document.getElementById('btn-help').addEventListener('click', () => {
+    document.getElementById('help-panel').classList.toggle('open');
+  });
+
+  document.getElementById('inp-op').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('inp-url').focus();
+  });
+  document.getElementById('inp-url').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startApp();
+  });
+
+  document.getElementById('inp-prefix').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('inp-courier-name').focus();
+  });
+  document.getElementById('inp-courier-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addCourierEntry();
+  });
+  window.addEventListener('resize', renderLogList);
+
+  const scanInp = document.getElementById('scan-inp');
+
+  scanInp.addEventListener('input', () => {
+    _scanBuffer = scanInp.value.toUpperCase();
+    updateLiveDisplay();
+  });
+
+  scanInp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleScan();
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    const mainActive = document.getElementById('scr-main').classList.contains('active');
+    if (!mainActive) return;
+    if (document.getElementById('drawer').classList.contains('open')) return;
+    if (document.getElementById('courier-modal-overlay').classList.contains('open')) return;
+    const activeEl = document.activeElement;
+    if (activeEl !== scanInp &&
+        activeEl.tagName !== 'INPUT' &&
+        activeEl.tagName !== 'TEXTAREA') {
+      if (e.key.length === 1 || e.key === 'Enter') {
+        scanInp.focus();
+      }
+    }
+  });
+
+  scanInp.addEventListener('focus', () => {
+    _scannerFocusLostAt = null;
+    _focusWarned = false;
+    updateScannerFocusStatus(true);
+  });
+
+  scanInp.addEventListener('blur', () => {
+    if (shouldMaintainScannerFocus()) updateScannerFocusStatus(false);
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    refocus();
+  });
+  window.addEventListener('focus', refocus);
+  window.addEventListener('pageshow', refocus);
+});
+
+// ─── COPY CODE ─────────────────────────────────────────────────
+function copyCode() {
+  navigator.clipboard.writeText(GAS_CODE).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Tersalin!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Salin'; btn.classList.remove('copied'); }, 2000);
+  }).catch(() => alert('Salin manual: tekan Ctrl+A lalu Ctrl+C pada kotak kode.'));
+}
+
+// ─── START APP ─────────────────────────────────────────────────
+function startApp() {
+  const op  = document.getElementById('inp-op').value.trim();
+  const url = document.getElementById('inp-url').value.trim();
+  if (!op) { alert('Masukkan nama operator terlebih dahulu.'); return; }
+  S.operator = op;
+  S.gasUrl   = url;
+  localStorage.setItem('sp_operator', op);
+  localStorage.setItem('sp_gasurl',   url);
+  localStorage.setItem('sp_active',   '1');
+  enterScanScreen();
+}
+
+function enterScanScreen() {
+  document.getElementById('scr-cfg').classList.remove('active');
+  document.getElementById('scr-main').classList.add('active');
+  document.getElementById('hdr-op').textContent = S.operator;
+  setConn('Menghubungkan...', '');
+  initAudio();
+  renderLogList();
+  startFocusWatchdog();
+  if (S.gasUrl) pingGAS();
+  else          setConn('Mode offline — export CSV tersedia', 'warn');
+  loadPendingQueue();
+  startAutoSync();
+  window.addEventListener('online',  onNetworkRestore);
+  window.addEventListener('offline', updateSyncStatus);
+  refocus();
+}
+
+function backToCfg() {
+  if (S.pendingQueue.length > 0) {
+    if (!confirm(
+      'Masih ada ' + S.pendingQueue.length + ' data yang BELUM tersinkronkan ke Google Sheets.\n\n' +
+      'Data aman tersimpan di browser — akan tersinkronkan saat login kembali.\n\nLanjutkan keluar?'
+    )) return;
+  } else if (S.log.length > 0) {
+    if (!confirm('Keluar? Semua data sudah tersinkronkan dan aman.')) return;
+  }
+
+  stopAutoSync();
+  stopFocusWatchdog();
+  window.removeEventListener('online',  onNetworkRestore);
+  window.removeEventListener('offline', updateSyncStatus);
+
+  localStorage.removeItem('sp_active');
+  S = { operator:'', gasUrl:'', pin:'', mode:'resi', resi:null, products:[],
+        log:[], pendingQueue:[], currentSessionId:null, currentResiStartedAt:null,
+        lastSyncTime:null, isSyncing:false, autoSyncTimer:null };
+  _scanBuffer = '';
+  resetResiUI();
+  updateLiveDisplay();
+  document.getElementById('log-list').innerHTML = '';
+  document.getElementById('log-empty').style.display = 'block';
+  document.getElementById('hdr-count').textContent = '0 data';
+  document.getElementById('scan-msg').textContent = 'Menunggu scan...';
+  document.getElementById('scan-msg').className = 'scan-message';
+  document.getElementById('scr-main').classList.remove('active');
+  document.getElementById('scr-cfg').classList.add('active');
+  document.getElementById('scan-inp').value = '';
+}
+
+// ─── PING GAS ──────────────────────────────────────────────────
+async function pingGAS() {
+  if (!S.gasUrl) return;
+  setConn('Menghubungkan ke Google Sheets...', '');
+  try {
+    await fetch(S.gasUrl, { mode: 'no-cors' });
+    updateSyncStatus();
+    document.getElementById('drawer-conn').textContent = 'Terhubung - ' + new Date().toLocaleTimeString('id-ID');
+    if (S.pendingQueue.length) syncQueue();
+  } catch(e) {
+    setConn('Tidak dapat terhubung - cek URL & koneksi', 'err');
+    document.getElementById('drawer-conn').textContent = 'Gagal terhubung';
+  }
+}
+
+function setConn(msg, level) {
+  const el = document.getElementById('hdr-conn');
+  el.textContent = msg;
+  el.style.color = level === 'ok' ? '#1D9E75' : level === 'err' ? '#E24B4A' : level === 'warn' ? '#BA7517' : '#888780';
+}
+
+// ─── LIVE DISPLAY ──────────────────────────────────────────────
+function updateLiveDisplay() {
+  const el = document.getElementById('scan-live');
+  el.textContent = _scanBuffer;
+}
+
+function handleScanZoneTap() { refocus(); }
+
+function handleNewResiBtn(e) {
+  e.stopPropagation();
+  if (S.mode === 'produksi' && S.resi) {
+    finishCurrentResi('button');
+    return;
+  }
+  newResi();
+}
+
+// ─── SCAN HANDLER ──────────────────────────────────────────────
+function handleScan() {
+  const val = _scanBuffer.trim();
+  if (!val) return;
+
+  _scanBuffer = '';
+  document.getElementById('scan-inp').value = '';
+  updateLiveDisplay();
+
+  if (S.mode === 'resi') {
+    const resiValidation = validateResiCode(val);
+    if (!resiValidation.isValid) {
+      setMsg('Prefix resi tidak valid. Resi ditolak.', 'err');
+      flash('err');
+      playFeedbackTone('err');
+      vibrate([80, 60, 80]);
+      refocus();
+      return;
+    }
+    lockResi(val, resiValidation.match);
+
+  } else {
+    // Auto-detect resi while in produksi mode
+    const resiValidation = validateResiCode(val);
+    if (resiValidation.isValid) {
+      if (S.products.length === 0) {
+        setMsg('⚠️ Minimal 1 produk harus discan sebelum pindah resi!', 'err');
+        flash('err');
+        playFeedbackTone('err');
+        vibrate([80, 60, 80]);
+        refocus();
+        return;
+      }
+      showToast('📦 Resi baru terdeteksi — ' + resiValidation.match.name);
+      finishCurrentResi('auto-next', val);
+      refocus();
+      return;
+    }
+
+    const parsed = parseProductionCode(val);
+    if (STRICT_PRODUCTION_VALIDATION && !parsed.isValid) {
+      setMsg('Format kode produksi tidak valid: ' + parsed.error, 'err');
+      flash('err');
+      playFeedbackTone('err');
+      vibrate([80, 60, 80]);
+      refocus();
+      return;
+    }
+
+    S.products.push(val);
+    const now = new Date();
+    const row = buildPairRow(val, now, parsed);
+    S.log.unshift(row);
+
+    const cnt = S.products.length;
+    document.getElementById('resi-sub').textContent = cnt + ' produk terscan';
+    document.getElementById('resi-sub').className = 'resi-sub has-data';
+    document.getElementById('hdr-count').textContent = S.log.length + ' data';
+
+    addProdItem(row, now);
+    renderLogList();
+    setMsg(
+      row.parseValid === 'YES'
+        ? '✓ Tersimpan — ' + row.jenisProduk + ' batch ' + row.batchProduksi
+        : '✓ Tersimpan — parser belum mengenali format kode.',
+      row.parseValid === 'YES' ? 'ok' : ''
+    );
+    flash('ok');
+    // ✅ PERUBAHAN: Suara khas untuk scan kode produksi
+    playFeedbackTone('product');
+    vibrate(row.parseValid === 'YES' ? [30] : [35, 40, 35]);
+
+    if (S.gasUrl) {
+      addToPendingQueue(row);
+      updateSyncStatus();
+    }
+
+    refocus();
+  }
+}
+
+// ─── LOCK RESI ─────────────────────────────────────────────────
+function lockResi(val, courierMatch) {
+  S.resi     = val;
+  S.products = [];
+  S.mode     = 'produksi';
+  S.currentSessionId = makeId();
+  S.currentResiStartedAt = new Date().toISOString();
+
+  document.getElementById('resi-val').textContent = val;
+  document.getElementById('resi-val').classList.add('active');
+  document.getElementById('resi-card').classList.add('locked');
+  document.getElementById('resi-sub').textContent  = '0 produk terscan';
+  document.getElementById('resi-sub').className    = 'resi-sub';
+  document.getElementById('scan-lbl').textContent  = 'Scan Kode Produksi';
+  document.getElementById('prod-section').classList.add('visible');
+  document.getElementById('prod-list').innerHTML = '';
+
+  const courierName = courierMatch ? courierMatch.name : detectCourier(val);
+  const badge = document.getElementById('resi-badge');
+  if (courierName) {
+    badge.textContent  = '🚚 ' + courierName;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  setMsg('Resi terkunci. Lanjut scan kode produksi.', '');
+  flash('ok');
+  // ✅ PERUBAHAN: Suara khas dua nada untuk konfirmasi kode resi terkunci
+  playFeedbackTone('resi');
+  vibrate([20, 40, 20]);
+  refocus();
+}
+
+// ─── PROD / LOG ITEMS ──────────────────────────────────────────
+function addProdItem(row, date) {
+  const t  = date.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const el = document.createElement('div');
+  el.className = 'prod-item';
+  const meta = row.parseValid === 'YES'
+    ? '<span class="parse-chip ok">Parsed</span>' +
+      '<span>Jenis: ' + escHtml(row.jenisProduk) + '</span>' +
+      '<span>Tanggal: ' + escHtml(row.tanggalProduksi) + '</span>' +
+      '<span>Batch: ' + escHtml(row.batchProduksi) + '</span>'
+    : '<span class="parse-chip err">Unparsed</span>' +
+      '<span>' + escHtml(row.parseError || 'Format belum cocok') + '</span>';
+  el.innerHTML =
+    '<div class="prod-dot"></div>' +
+    '<div class="prod-body">' +
+      '<div class="prod-main">' +
+        '<span class="prod-code">' + escHtml(row.kodeProduksi) + '</span>' +
+        '<span class="prod-time">' + t + '</span>' +
+      '</div>' +
+      '<div class="prod-meta">' + meta + '</div>' +
+    '</div>';
+  document.getElementById('prod-list').insertBefore(el, document.getElementById('prod-list').firstChild);
+}
+
+function addLogItem(r) {
+  const time = r.timestamp.split(' ')[1] || r.timestamp;
+  const el   = document.createElement('div');
+  el.className = 'log-item';
+
+  if (r.eventType === 'RESI_DONE') {
+    el.innerHTML =
+      '<span class="log-time">'  + time.slice(0,5)     + '</span>' +
+      '<div class="log-body">' +
+        '<div class="log-main">' +
+          '<span class="log-resi">' + escHtml(r.kodeResi) + '</span>' +
+          '<span class="log-arrow">→</span>' +
+          '<span class="log-prod">RESI SELESAI</span>' +
+        '</div>' +
+        '<div class="log-meta">Sumber: ' + escHtml(r.finishSource || 'manual') + '</div>' +
+      '</div>';
+  } else {
+    const meta = r.parseValid === 'YES'
+      ? 'Jenis ' + escHtml(r.jenisProduk) + ' · Tgl ' + escHtml(r.tanggalProduksi) + ' · Batch ' + escHtml(r.batchProduksi)
+      : escHtml(r.parseError || 'Format belum cocok');
+
+    el.innerHTML =
+      '<span class="log-time">'  + time.slice(0,5)         + '</span>' +
+      '<div class="log-body">' +
+        '<div class="log-main">' +
+          '<span class="log-resi">'  + escHtml(r.kodeResi)     + '</span>' +
+          '<span class="log-arrow">→</span>' +
+          '<span class="log-prod">'  + escHtml(r.kodeProduksi) + '</span>' +
+        '</div>' +
+        '<div class="log-meta">' + meta + '</div>' +
+      '</div>';
+  }
+  return el;
+}
+
+function getVisibleLogLimit() {
+  const width = window.innerWidth || 0;
+  if (width < 700) return LOG_LIMITS.mobile;
+  if (width < 1100) return LOG_LIMITS.tablet;
+  return LOG_LIMITS.desktop;
+}
+
+function renderLogList() {
+  const list = document.getElementById('log-list');
+  const empty = document.getElementById('log-empty');
+  const note = document.getElementById('log-limit-note');
+  if (!list || !empty || !note) return;
+
+  list.innerHTML = '';
+
+  if (!S.log.length) {
+    empty.style.display = 'block';
+    note.textContent = '';
+    return;
+  }
+
+  const limit = getVisibleLogLimit();
+  const visible = S.log.slice(0, limit);
+  visible.forEach((row) => list.appendChild(addLogItem(row)));
+  empty.style.display = 'none';
+  note.textContent =
+    S.log.length > limit
+      ? 'Menampilkan ' + limit + ' terbaru dari ' + S.log.length
+      : 'Menampilkan ' + S.log.length + ' item';
+}
+
+// ─── NEW RESI ──────────────────────────────────────────────────
+function newResi() {
+  S.resi     = null;
+  S.products = [];
+  S.mode     = 'resi';
+  S.currentSessionId = null;
+  S.currentResiStartedAt = null;
+  resetResiUI();
+  setMsg('Scan kode resi berikutnya.', '');
+  refocus();
+}
+
+function resetResiUI() {
+  document.getElementById('resi-val').textContent  = '— Belum discan —';
+  document.getElementById('resi-val').classList.remove('active');
+  document.getElementById('resi-card').classList.remove('locked');
+  document.getElementById('resi-sub').textContent  = '';
+  document.getElementById('resi-sub').className    = 'resi-sub';
+  document.getElementById('resi-badge').style.display = 'none';
+  document.getElementById('scan-lbl').textContent  = 'Scan Kode Resi';
+  document.getElementById('prod-section').classList.remove('visible');
+  document.getElementById('prod-list').innerHTML = '';
+}
+
+// ─── EXPORT CSV ────────────────────────────────────────────────
+function doExport() {
+  if (!S.log.length) { alert('Belum ada data untuk diexport.'); return; }
+  const header = 'ID,Event Type,Session ID,Status Resi,Timestamp,Timestamp ISO,Kode Resi,Kode Produksi,Jenis Produk,Tanggal Produksi,Tanggal Produksi ISO,Batch Produksi,Parser Key,Parse Valid,Parse Error,Operator\n';
+  const rows   = S.log
+    .map(r => [
+      r.id, r.eventType, r.sessionId, r.resiStatus, r.timestamp, r.timestampIso,
+      r.kodeResi, r.kodeProduksi, r.jenisProduk, r.tanggalProduksi, r.tanggalProduksiIso,
+      r.batchProduksi, r.parserKey, r.parseValid, r.parseError, r.operator
+    ].map(toCsvCell).join(','))
+    .join('\n');
+  const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'scan_log_' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─── OFFLINE-FIRST SYNC ────────────────────────────────────────
+function addToPendingQueue(row) {
+  // ✅ PERUBAHAN: Hanya kirim baris PAIR (yang memiliki kode produksi) ke spreadsheet
+  // Baris RESI_DONE (tanpa kode produksi) tidak dikirim ke Google Sheets
+  if (!row.kodeProduksi) return;
+  S.pendingQueue.push(row);
+  persistPendingQueue();
+}
+
+function persistPendingQueue() {
+  try { localStorage.setItem('sp_pendingQueue', JSON.stringify(S.pendingQueue)); } catch(e) {}
+}
+
+function loadPendingQueue() {
+  try {
+    const s = localStorage.getItem('sp_pendingQueue');
+    S.pendingQueue = s ? JSON.parse(s) : [];
+  } catch(e) { S.pendingQueue = []; }
+  updateSyncStatus();
+}
+
+function startAutoSync() {
+  if (!S.gasUrl) return;
+  stopAutoSync();
+  setTimeout(syncQueue, 3000);
+  S.autoSyncTimer = setInterval(syncQueue, 30000);
+}
+
+function stopAutoSync() {
+  if (S.autoSyncTimer) { clearInterval(S.autoSyncTimer); S.autoSyncTimer = null; }
+}
+
+async function syncQueue() {
+  if (!S.gasUrl || !S.pendingQueue.length || S.isSyncing) return;
+  if (!navigator.onLine) { updateSyncStatus(); return; }
+
+  S.isSyncing = true;
+  updateSyncStatus();
+
+  const snapshot = [...S.pendingQueue];
+  let sent = 0;
+
+  for (const row of snapshot) {
+    try {
+      await fetch(S.gasUrl, {
+        method: 'POST',
+        mode:   'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(row)
+      });
+      const idx = S.pendingQueue.findIndex(r =>
+        (r.id && row.id && r.id === row.id) ||
+        (r.timestamp === row.timestamp && r.kodeResi === row.kodeResi && r.kodeProduksi === row.kodeProduksi)
+      );
+      if (idx > -1) S.pendingQueue.splice(idx, 1);
+      sent++;
+    } catch(e) { break; }
+  }
+
+  persistPendingQueue();
+  S.isSyncing = false;
+
+  if (sent > 0) {
+    S.lastSyncTime = new Date();
+    showToast('✅ ' + sent + ' data berhasil disinkronkan');
+  }
+
+  updateSyncStatus();
+}
+
+function onNetworkRestore() {
+  showToast('🌐 Koneksi pulih — menyinkronkan data...');
+  setTimeout(syncQueue, 1500);
+  updateSyncStatus();
+}
+
+function updateSyncStatus() {
+  const pending = S.pendingQueue.length;
+  const online  = navigator.onLine;
+  let msg = '', level = '';
+
+  if (!S.gasUrl) {
+    msg = 'Mode offline — export CSV tersedia'; level = 'warn';
+  } else if (S.isSyncing) {
+    msg = '⏳ Menyinkronkan ' + pending + ' data...'; level = '';
+  } else if (!online) {
+    msg = pending > 0 ? '📶 Offline — ' + pending + ' data antre kirim' : '📶 Offline';
+    level = 'err';
+  } else if (pending > 0) {
+    const t = S.lastSyncTime
+      ? S.lastSyncTime.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' })
+      : '—';
+    msg = pending + ' menunggu sinkron · terakhir ' + t; level = 'warn';
+  } else {
+    const t = S.lastSyncTime
+      ? S.lastSyncTime.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' })
+      : null;
+    msg = t ? '✓ Tersinkron pukul ' + t : 'Terhubung — siap scan'; level = 'ok';
+  }
+
+  setConn(msg, level);
+
+  const ds = document.getElementById('drawer-stats');
+  if (ds) {
+    ds.textContent =
+      S.log.length + ' pasangan terscan di sesi ini' +
+      (pending ? '\n' + pending + ' data belum tersinkronkan' : '\nSemua data sudah tersinkronkan');
+  }
+
+  const badge = document.getElementById('hdr-count');
+  if (badge) {
+    if (pending > 0 && S.gasUrl) {
+      badge.style.background  = 'var(--amber-light)';
+      badge.style.color       = 'var(--amber)';
+      badge.style.borderColor = 'var(--amber)';
+      badge.title = pending + ' data belum tersinkronkan';
+    } else {
+      badge.style.background = badge.style.color = badge.style.borderColor = '';
+      badge.title = '';
+    }
+  }
+}
+
+// ─── DRAWER ────────────────────────────────────────────────────
+function openDrawer() {
+  updateSyncStatus();
+  document.getElementById('drawer-overlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('drawer-overlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+  refocus();
+}
+
+// ─── COURIER MODAL ─────────────────────────────────────────────
+let _tempCouriers = [];
+
+function openCourierModal() {
+  _tempCouriers = loadCouriers();
+  renderCourierList();
+  document.getElementById('courier-modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('inp-prefix').focus(), 100);
+}
+
+function closeCourierModal() {
+  document.getElementById('courier-modal-overlay').classList.remove('open');
+  refocus();
+}
+
+function renderCourierList() {
+  const list = document.getElementById('courier-list');
+  list.innerHTML = '';
+  if (_tempCouriers.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--gray-400);font-size:13px">Belum ada kode ekspedisi. Tambahkan di bawah.</div>';
+    return;
+  }
+  _tempCouriers.forEach((c, i) => {
+    const el = document.createElement('div');
+    el.className = 'courier-item';
+    el.innerHTML =
+      '<span class="ci-prefix">' + escHtml(c.prefix) + '</span>' +
+      '<span class="ci-name">'   + escHtml(c.name)   + '</span>' +
+      '<button class="ci-del" title="Hapus" onclick="deleteCourierEntry(' + i + ')">×</button>';
+    list.appendChild(el);
+  });
+}
+
+function addCourierEntry() {
+  const prefix = document.getElementById('inp-prefix').value.trim().toUpperCase();
+  const name   = document.getElementById('inp-courier-name').value.trim();
+  if (!prefix) { document.getElementById('inp-prefix').focus(); return; }
+  if (!name)   { document.getElementById('inp-courier-name').focus(); return; }
+  if (_tempCouriers.some(c => c.prefix.toUpperCase() === prefix)) {
+    alert('Kode "' + prefix + '" sudah ada. Hapus dulu jika ingin menggantinya.'); return;
+  }
+  _tempCouriers.push({ prefix, name });
+  document.getElementById('inp-prefix').value = '';
+  document.getElementById('inp-courier-name').value = '';
+  renderCourierList();
+  document.getElementById('inp-prefix').focus();
+}
+
+function deleteCourierEntry(i) {
+  _tempCouriers.splice(i, 1);
+  renderCourierList();
+}
+
+function saveCourierModal() {
+  saveCouriers(_tempCouriers);
+  closeCourierModal();
+  showToast('✅ Kode ekspedisi disimpan — ' + _tempCouriers.length + ' entri');
+}
+
+// ─── HELPERS ───────────────────────────────────────────────────
+function setMsg(msg, level) {
+  const el = document.getElementById('scan-msg');
+  el.textContent = msg;
+  el.className = 'scan-message' + (level ? ' ' + level : '');
+}
+
+function flash(type) {
+  const box = document.getElementById('scan-zone');
+  box.classList.remove('flash-ok', 'flash-err');
+  void box.offsetWidth;
+  box.classList.add(type === 'ok' ? 'flash-ok' : 'flash-err');
+}
+
+function shouldMaintainScannerFocus() {
+  const mainActive = document.getElementById('scr-main').classList.contains('active');
+  if (!mainActive) return false;
+  if (document.visibilityState && document.visibilityState !== 'visible') return false;
+  if (document.getElementById('drawer').classList.contains('open')) return false;
+  if (document.getElementById('courier-modal-overlay').classList.contains('open')) return false;
+  return true;
+}
+
+function updateScannerFocusStatus(isActive) {
+  const badge = document.getElementById('scanner-status');
+  const dot = document.getElementById('focus-dot');
+  const text = document.getElementById('focus-text');
+  if (!badge || !dot || !text) return;
+  badge.className = 'scanner-status ' + (isActive ? 'active' : 'lost');
+  dot.classList.toggle('lost', !isActive);
+  text.textContent = isActive ? 'Scanner aktif' : 'Scanner perlu fokus browser';
+}
+
+function startFocusWatchdog() {
+  stopFocusWatchdog();
+  updateScannerFocusStatus(document.activeElement === document.getElementById('scan-inp'));
+  _focusWatchdog = setInterval(() => {
+    if (!shouldMaintainScannerFocus()) return;
+    const inp = document.getElementById('scan-inp');
+    if (!inp) return;
+    if (document.activeElement !== inp) {
+      if (!_scannerFocusLostAt) _scannerFocusLostAt = Date.now();
+      updateScannerFocusStatus(false);
+      refocus();
+      if (!_focusWarned && Date.now() - _scannerFocusLostAt >= FOCUS_WARN_AFTER_MS) {
+        playFeedbackTone('warn');
+        _focusWarned = true;
+      }
+      return;
+    }
+    _scannerFocusLostAt = null;
+    _focusWarned = false;
+    updateScannerFocusStatus(true);
+  }, FOCUS_WATCH_INTERVAL_MS);
+}
+
+function stopFocusWatchdog() {
+  if (_focusWatchdog) { clearInterval(_focusWatchdog); _focusWatchdog = null; }
+  _scannerFocusLostAt = null;
+  _focusWarned = false;
+}
+
+function refocus() {
+  setTimeout(() => {
+    const inp = document.getElementById('scan-inp');
+    if (!inp || !shouldMaintainScannerFocus()) return;
+    try { inp.focus({ preventScroll: true }); } catch(e) { inp.focus(); }
+  }, 60);
+}
+
+function initAudio() {
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return;
+  try {
+    if (!_audioCtx) _audioCtx = new AudioCtx();
+    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  } catch(e) {}
+}
+
+// ─── ✅ PERUBAHAN: Fungsi suara dengan tipe 'resi' dan 'product' baru ─────
+function playFeedbackTone(type) {
+  initAudio();
+  if (!_audioCtx) return;
+
+  try {
+    const now = _audioCtx.currentTime;
+
+    // 🔔 Suara RESI: Dua nada naik (beep-beep) — konfirmasi kode resi terkunci
+    if (type === 'resi') {
+      const freqs = [660, 1045];
+      freqs.forEach((freq, i) => {
+        const delay = i * 0.13;
+        const osc  = _audioCtx.createOscillator();
+        const gain = _audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + delay);
+        gain.gain.setValueAtTime(0.08, now + delay);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.11);
+        osc.connect(gain);
+        gain.connect(_audioCtx.destination);
+        osc.start(now + delay);
+        osc.stop(now + delay + 0.11);
+      });
+      return;
+    }
+
+    // 📦 Suara PRODUK: Satu beep pendek & tajam — konfirmasi kode produksi diterima
+    if (type === 'product') {
+      const osc  = _audioCtx.createOscillator();
+      const gain = _audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1380, now);
+      osc.frequency.exponentialRampToValueAtTime(1100, now + 0.06);
+      gain.gain.setValueAtTime(0.07, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
+      osc.connect(gain);
+      gain.connect(_audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.07);
+      return;
+    }
+
+    // Tipe lainnya: ok / err / warn (tidak berubah)
+    const osc  = _audioCtx.createOscillator();
+    const gain = _audioCtx.createGain();
+    const config = type === 'err'
+      ? { freq: 220, duration: 0.16, volume: 0.06, wave: 'square' }
+      : type === 'warn'
+        ? { freq: 520, duration: 0.08, volume: 0.04, wave: 'triangle' }
+        : { freq: 880, duration: 0.07, volume: 0.045, wave: 'sine' };
+
+    osc.type = config.wave;
+    osc.frequency.setValueAtTime(config.freq, now);
+    gain.gain.setValueAtTime(config.volume, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + config.duration);
+    osc.connect(gain);
+    gain.connect(_audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + config.duration);
+  } catch(e) {}
+}
+
+function vibrate(pattern) {
+  try { navigator.vibrate && navigator.vibrate(pattern); } catch(e) {}
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function toCsvCell(value) {
+  return '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"';
+}
+
+function makeId() {
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+  return 'sp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+}
+
+function parseProductionCode(raw) {
+  const code = String(raw || '').trim().toUpperCase();
+  for (const pattern of PRODUCTION_CODE_PATTERNS) {
+    const match = code.match(pattern.regex);
+    if (!match || !match.groups) continue;
+    const dateMeta = parseProductionDate(match.groups.tanggal, pattern.dateMode);
+    return {
+      raw: code,
+      isValid: !dateMeta.error,
+      parserKey: pattern.key,
+      jenisProduk: resolveProductTypeLabel(match.groups.jenis || ''),
+      tanggalProduksi: dateMeta.display || '',
+      tanggalProduksiIso: dateMeta.iso || '',
+      batchProduksi: match.groups.batch || '',
+      error: dateMeta.error || ''
+    };
+  }
+  return {
+    raw: code,
+    isValid: false,
+    parserKey: 'unknown',
+    jenisProduk: '',
+    tanggalProduksi: '',
+    tanggalProduksiIso: '',
+    batchProduksi: '',
+    error: 'Format kode produksi belum cocok dengan parser aktif'
+  };
+}
+
+function resolveProductTypeLabel(code) {
+  const normalized = String(code || '').trim().toUpperCase();
+  return PRODUCT_TYPE_LABELS[normalized] || normalized;
+}
+
+function parseProductionDate(token, mode) {
+  const clean = String(token || '').trim();
+  let year = '', month = '', day = '';
+
+  if (mode === 'YYYYMMDD' && /^\d{8}$/.test(clean)) {
+    year = clean.slice(0, 4); month = clean.slice(4, 6); day = clean.slice(6, 8);
+  } else if (mode === 'YYMMDD' && /^\d{6}$/.test(clean)) {
+    year = String(2000 + Number(clean.slice(0, 2))); month = clean.slice(2, 4); day = clean.slice(4, 6);
+  } else if (mode === 'DDMMYY' && /^\d{6}$/.test(clean)) {
+    day = clean.slice(0, 2); month = clean.slice(2, 4); year = String(2000 + Number(clean.slice(4, 6)));
+  } else {
+    return { display: '', iso: '', error: 'Bagian tanggal produksi tidak valid' };
+  }
+
+  const iso = year + '-' + month + '-' + day;
+  const dt = new Date(iso + 'T00:00:00');
+  if (
+    Number.isNaN(dt.getTime()) ||
+    dt.getFullYear() !== Number(year) ||
+    dt.getMonth() + 1 !== Number(month) ||
+    dt.getDate() !== Number(day)
+  ) {
+    return { display: '', iso: '', error: 'Tanggal produksi tidak bisa dibaca' };
+  }
+
+  return { display: day + '/' + month + '/' + year, iso, error: '' };
+}
+
+function buildPairRow(kodeProduksi, now, parsed) {
+  const ts = now.toLocaleDateString('id-ID', { day:'2-digit', month:'2-digit', year:'numeric' })
+          + ' '
+          + now.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+  return {
+    id: makeId(),
+    eventType: 'PAIR',
+    sessionId: S.currentSessionId,
+    resiStatus: 'OPEN',
+    timestamp: ts,
+    timestampIso: now.toISOString(),
+    kodeResi: S.resi,
+    kodeProduksi,
+    jenisProduk: parsed.jenisProduk,
+    tanggalProduksi: parsed.tanggalProduksi,
+    tanggalProduksiIso: parsed.tanggalProduksiIso,
+    batchProduksi: parsed.batchProduksi,
+    parserKey: parsed.parserKey,
+    parseValid: parsed.isValid ? 'YES' : 'NO',
+    parseError: parsed.error || '',
+    operator: S.operator
+  };
+}
+
+function buildFinishRow(now, source) {
+  const ts = now.toLocaleDateString('id-ID', { day:'2-digit', month:'2-digit', year:'numeric' })
+          + ' '
+          + now.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+  return {
+    id: makeId(),
+    eventType: 'RESI_DONE',
+    sessionId: S.currentSessionId,
+    resiStatus: 'DONE',
+    timestamp: ts,
+    timestampIso: now.toISOString(),
+    kodeResi: S.resi,
+    kodeProduksi: '',
+    jenisProduk: '',
+    tanggalProduksi: '',
+    tanggalProduksiIso: '',
+    batchProduksi: '',
+    parserKey: '',
+    parseValid: '',
+    parseError: '',
+    operator: S.operator,
+    finishSource: source || 'manual'
+  };
+}
+
+function finishCurrentResi(source, nextResiCode) {
+  if (!S.resi) {
+    newResi();
+    return;
+  }
+
+  if (S.products.length === 0) {
+    setMsg('⚠️ Minimal 1 produk harus discan sebelum resi bisa diselesaikan!', 'err');
+    flash('err');
+    playFeedbackTone('err');
+    vibrate([80, 60, 80]);
+    refocus();
+    return;
+  }
+
+  const activeResi = S.resi;
+  const scanCount = S.products.length;
+  const now = new Date();
+  const row = buildFinishRow(now, source);
+
+  S.log.unshift(row);
+  document.getElementById('hdr-count').textContent = S.log.length + ' data';
+  renderLogList();
+
+  // ✅ PERUBAHAN: RESI_DONE tidak dikirim ke spreadsheet (kodeProduksi kosong)
+  // addToPendingQueue sudah memfilter row tanpa kodeProduksi secara otomatis
+
+  newResi();
+  setMsg('Resi ' + activeResi + ' selesai dengan ' + scanCount + ' produk. Scan resi berikutnya.', 'ok');
+  flash('ok');
+  if (!nextResiCode) {
+    playFeedbackTone('ok');
+    vibrate([20, 40, 20, 40, 20]);
+  }
+
+  if (nextResiCode) {
+    lockResi(nextResiCode);
+  }
+}
+
+// ─── TOAST ─────────────────────────────────────────────────────
+let _toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
