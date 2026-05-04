@@ -613,6 +613,21 @@
 
     .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
+    /* ── Banner notifikasi restore ── */
+    .restore-banner {
+      display: none;
+      background: var(--teal-light);
+      border-bottom: 1px solid rgba(29,158,117,0.28);
+      padding: 9px 16px;
+      font-size: 12px;
+      color: var(--teal-dark);
+      font-weight: 600;
+      text-align: center;
+      letter-spacing: -0.01em;
+    }
+
+    .restore-banner.show { display: block; }
+
     @media (min-width: 600px) {
       .scan-body   { padding: 20px 24px 32px; }
       .scan-header { padding: 14px 24px; }
@@ -693,6 +708,9 @@
 
   <!-- SCREEN 2 — SCAN -->
   <div id="scr-main" class="screen">
+
+    <!-- Banner restore sesi -->
+    <div class="restore-banner" id="restore-banner"></div>
 
     <div class="scan-header">
       <div>
@@ -780,6 +798,16 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h.01M11 8h6"/><path d="M7 12h.01M11 12h4"/></svg>
         Kustomisasi Kode Ekspedisi
       </button>
+
+      <!-- ✅ BARU: Tombol Reset Data Sesi -->
+      <button class="drawer-btn danger" onclick="confirmResetSession(); closeDrawer();">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+        </svg>
+        Reset Data Sesi
+      </button>
+
       <button class="drawer-btn danger" onclick="if(confirm('Keluar dari sesi ini?')) backToCfg(); closeDrawer();">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         Ganti Operator / Keluar
@@ -957,7 +985,7 @@ let S = {
   operator: '', gasUrl: '', pin: '',
   mode: 'resi',
   resi: null,
-  products: [],
+  products: [],        // array of produk rows (full objects) untuk resi aktif
   log: [],
   pendingQueue: [],
   currentSessionId: null,
@@ -972,6 +1000,166 @@ let _audioCtx = null;
 let _focusWatchdog = null;
 let _scannerFocusLostAt = null;
 let _focusWarned = false;
+
+// ═══════════════════════════════════════════════════════════════
+// ✅ PERSISTENSI SESI — Simpan & Muat state ke localStorage
+// ═══════════════════════════════════════════════════════════════
+
+const SESSION_KEY = 'sp_session_v2';
+
+/**
+ * Simpan state sesi saat ini ke localStorage.
+ * Dipanggil setiap kali ada perubahan data penting.
+ */
+function saveSessionState() {
+  try {
+    const payload = {
+      log:                  S.log,
+      resi:                 S.resi,
+      products:             S.products,           // simpan sebagai array row lengkap
+      mode:                 S.mode,
+      currentSessionId:     S.currentSessionId,
+      currentResiStartedAt: S.currentResiStartedAt,
+      lastSyncTime:         S.lastSyncTime ? S.lastSyncTime.toISOString() : null,
+      savedAt:              new Date().toISOString()
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(payload));
+  } catch(e) {
+    console.warn('saveSessionState gagal:', e);
+  }
+}
+
+/**
+ * Muat state sesi dari localStorage dan rebuild UI.
+ * Dipanggil saat masuk ke layar scan.
+ * @returns {boolean} true jika ada data yang dipulihkan
+ */
+function loadSessionState() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return false;
+
+    const data = JSON.parse(raw);
+    if (!data || !data.log) return false;
+
+    // Pulihkan state
+    S.log                  = Array.isArray(data.log)      ? data.log      : [];
+    S.resi                 = data.resi                    || null;
+    S.products             = Array.isArray(data.products) ? data.products : [];
+    S.mode                 = data.mode                    || 'resi';
+    S.currentSessionId     = data.currentSessionId        || null;
+    S.currentResiStartedAt = data.currentResiStartedAt    || null;
+    S.lastSyncTime         = data.lastSyncTime ? new Date(data.lastSyncTime) : null;
+
+    if (S.log.length === 0 && !S.resi) return false;
+
+    // ── Rebuild UI resi aktif ──────────────────────────────────
+    if (S.resi && S.mode === 'produksi') {
+      const resiEl = document.getElementById('resi-val');
+      resiEl.textContent = S.resi;
+      resiEl.classList.add('active');
+      document.getElementById('resi-card').classList.add('locked');
+
+      const cnt = S.products.length;
+      document.getElementById('resi-sub').textContent = cnt + ' produk terscan';
+      document.getElementById('resi-sub').className   = cnt > 0 ? 'resi-sub has-data' : 'resi-sub';
+      document.getElementById('scan-lbl').textContent  = 'Scan Kode Produksi';
+      document.getElementById('prod-section').classList.add('visible');
+
+      // Ekspedisi badge
+      const courierName = detectCourier(S.resi);
+      const badge = document.getElementById('resi-badge');
+      if (courierName) {
+        badge.textContent   = '🚚 ' + courierName;
+        badge.style.display = 'inline-block';
+      }
+
+      // Rebuild product list dari S.products (full row objects)
+      const prodList = document.getElementById('prod-list');
+      prodList.innerHTML = '';
+      S.products.forEach(row => {
+        const el = _buildProdItemEl(row, null); // null = pakai timestamp dari row
+        prodList.appendChild(el);
+      });
+    }
+
+    // ── Rebuild log list & header ──────────────────────────────
+    document.getElementById('hdr-count').textContent = S.log.length + ' data';
+    renderLogList();
+
+    // ── Tampilkan banner restore ───────────────────────────────
+    const banner = document.getElementById('restore-banner');
+    const savedAt = data.savedAt
+      ? new Date(data.savedAt).toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' })
+      : '—';
+    banner.textContent = '🔄 Sesi dipulihkan · ' + S.log.length + ' data · terakhir disimpan pukul ' + savedAt;
+    banner.classList.add('show');
+    setTimeout(() => banner.classList.remove('show'), 5000);
+
+    return true;
+  } catch(e) {
+    console.warn('loadSessionState gagal:', e);
+    return false;
+  }
+}
+
+/**
+ * Hapus state sesi dari localStorage (dipanggil saat operator reset atau keluar).
+ */
+function clearSessionState() {
+  try { localStorage.removeItem(SESSION_KEY); } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ✅ RESET SESI
+// ═══════════════════════════════════════════════════════════════
+
+function confirmResetSession() {
+  const pendingInfo = S.pendingQueue.length > 0
+    ? '\n⚠️ ' + S.pendingQueue.length + ' data belum tersinkronkan akan ikut terhapus!'
+    : '';
+
+  if (!confirm(
+    'Reset semua data sesi ini?\n\n' +
+    'Semua riwayat scan (' + S.log.length + ' item) akan dihapus dari browser.' +
+    pendingInfo + '\n\nLanjutkan?'
+  )) return;
+
+  doResetSession();
+}
+
+function doResetSession() {
+  // Bersihkan state
+  S.log                  = [];
+  S.resi                 = null;
+  S.products             = [];
+  S.mode                 = 'resi';
+  S.currentSessionId     = null;
+  S.currentResiStartedAt = null;
+  S.lastSyncTime         = null;
+  S.pendingQueue         = [];
+  S.isSyncing            = false;
+
+  // Hapus dari localStorage
+  clearSessionState();
+  persistPendingQueue();
+
+  // Reset UI
+  resetResiUI();
+  _scanBuffer = '';
+  document.getElementById('scan-inp').value = '';
+  updateLiveDisplay();
+  document.getElementById('log-list').innerHTML = '';
+  document.getElementById('log-empty').style.display = 'block';
+  document.getElementById('hdr-count').textContent = '0 data';
+  document.getElementById('scan-msg').textContent  = 'Menunggu scan...';
+  document.getElementById('scan-msg').className    = 'scan-message';
+  document.getElementById('restore-banner').classList.remove('show');
+  updateSyncStatus();
+
+  showToast('🗑️ Data sesi berhasil direset');
+  refocus();
+}
 
 // ─── INIT ──────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
@@ -1082,15 +1270,23 @@ function enterScanScreen() {
   document.getElementById('hdr-op').textContent = S.operator;
   setConn('Menghubungkan...', '');
   initAudio();
+  loadPendingQueue();
+
+  // ✅ Muat state sesi dari localStorage (jika ada)
+  const restored = loadSessionState();
+
   renderLogList();
   startFocusWatchdog();
   if (S.gasUrl) pingGAS();
   else          setConn('Mode offline — export CSV tersedia', 'warn');
-  loadPendingQueue();
   startAutoSync();
   window.addEventListener('online',  onNetworkRestore);
   window.addEventListener('offline', updateSyncStatus);
   refocus();
+
+  if (restored) {
+    updateSyncStatus();
+  }
 }
 
 function backToCfg() {
@@ -1100,7 +1296,7 @@ function backToCfg() {
       'Data aman tersimpan di browser — akan tersinkronkan saat login kembali.\n\nLanjutkan keluar?'
     )) return;
   } else if (S.log.length > 0) {
-    if (!confirm('Keluar? Semua data sudah tersinkronkan dan aman.')) return;
+    if (!confirm('Keluar? Data sesi akan tetap tersimpan dan bisa dipulihkan saat login kembali.')) return;
   }
 
   stopAutoSync();
@@ -1109,6 +1305,10 @@ function backToCfg() {
   window.removeEventListener('offline', updateSyncStatus);
 
   localStorage.removeItem('sp_active');
+
+  // ✅ Simpan state sebelum keluar (agar bisa dipulihkan nanti)
+  saveSessionState();
+
   S = { operator:'', gasUrl:'', pin:'', mode:'resi', resi:null, products:[],
         log:[], pendingQueue:[], currentSessionId:null, currentResiStartedAt:null,
         lastSyncTime:null, isSyncing:false, autoSyncTimer:null };
@@ -1120,6 +1320,7 @@ function backToCfg() {
   document.getElementById('hdr-count').textContent = '0 data';
   document.getElementById('scan-msg').textContent = 'Menunggu scan...';
   document.getElementById('scan-msg').className = 'scan-message';
+  document.getElementById('restore-banner').classList.remove('show');
   document.getElementById('scr-main').classList.remove('active');
   document.getElementById('scr-cfg').classList.add('active');
   document.getElementById('scan-inp').value = '';
@@ -1212,9 +1413,11 @@ function handleScan() {
       return;
     }
 
-    S.products.push(val);
     const now = new Date();
     const row = buildPairRow(val, now, parsed);
+
+    // ✅ Simpan produk sebagai row lengkap (untuk restore UI)
+    S.products.push(row);
     S.log.unshift(row);
 
     const cnt = S.products.length;
@@ -1231,7 +1434,6 @@ function handleScan() {
       row.parseValid === 'YES' ? 'ok' : ''
     );
     flash('ok');
-    // ✅ PERUBAHAN: Suara khas untuk scan kode produksi
     playFeedbackTone('product');
     vibrate(row.parseValid === 'YES' ? [30] : [35, 40, 35]);
 
@@ -1239,6 +1441,9 @@ function handleScan() {
       addToPendingQueue(row);
       updateSyncStatus();
     }
+
+    // ✅ Simpan state ke localStorage
+    saveSessionState();
 
     refocus();
   }
@@ -1272,15 +1477,32 @@ function lockResi(val, courierMatch) {
 
   setMsg('Resi terkunci. Lanjut scan kode produksi.', '');
   flash('ok');
-  // ✅ PERUBAHAN: Suara khas dua nada untuk konfirmasi kode resi terkunci
   playFeedbackTone('resi');
   vibrate([20, 40, 20]);
+
+  // ✅ Simpan state ke localStorage
+  saveSessionState();
+
   refocus();
 }
 
 // ─── PROD / LOG ITEMS ──────────────────────────────────────────
-function addProdItem(row, date) {
-  const t  = date.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+/**
+ * Helper internal: bangun elemen DOM prod-item dari row.
+ * Dipakai di addProdItem dan saat restore.
+ */
+function _buildProdItemEl(row, dateOverride) {
+  // Coba pakai timestamp dari row jika dateOverride null
+  let t = '—';
+  if (dateOverride) {
+    t = dateOverride.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  } else if (row.timestamp) {
+    // Format: "DD/MM/YYYY HH:MM:SS"
+    const parts = row.timestamp.split(' ');
+    t = parts[1] || parts[0] || '—';
+  }
+
   const el = document.createElement('div');
   el.className = 'prod-item';
   const meta = row.parseValid === 'YES'
@@ -1299,6 +1521,11 @@ function addProdItem(row, date) {
       '</div>' +
       '<div class="prod-meta">' + meta + '</div>' +
     '</div>';
+  return el;
+}
+
+function addProdItem(row, date) {
+  const el = _buildProdItemEl(row, date);
   document.getElementById('prod-list').insertBefore(el, document.getElementById('prod-list').firstChild);
 }
 
@@ -1377,6 +1604,10 @@ function newResi() {
   S.currentResiStartedAt = null;
   resetResiUI();
   setMsg('Scan kode resi berikutnya.', '');
+
+  // ✅ Simpan state ke localStorage
+  saveSessionState();
+
   refocus();
 }
 
@@ -1416,8 +1647,6 @@ function doExport() {
 
 // ─── OFFLINE-FIRST SYNC ────────────────────────────────────────
 function addToPendingQueue(row) {
-  // ✅ PERUBAHAN: Hanya kirim baris PAIR (yang memiliki kode produksi) ke spreadsheet
-  // Baris RESI_DONE (tanpa kode produksi) tidak dikirim ke Google Sheets
   if (!row.kodeProduksi) return;
   S.pendingQueue.push(row);
   persistPendingQueue();
@@ -1479,6 +1708,7 @@ async function syncQueue() {
   if (sent > 0) {
     S.lastSyncTime = new Date();
     showToast('✅ ' + sent + ' data berhasil disinkronkan');
+    saveSessionState(); // ✅ Update lastSyncTime di localStorage
   }
 
   updateSyncStatus();
@@ -1688,7 +1918,6 @@ function initAudio() {
   } catch(e) {}
 }
 
-// ─── ✅ PERUBAHAN: Fungsi suara dengan tipe 'resi' dan 'product' baru ─────
 function playFeedbackTone(type) {
   initAudio();
   if (!_audioCtx) return;
@@ -1696,7 +1925,6 @@ function playFeedbackTone(type) {
   try {
     const now = _audioCtx.currentTime;
 
-    // 🔔 Suara RESI: Dua nada naik (beep-beep) — konfirmasi kode resi terkunci
     if (type === 'resi') {
       const freqs = [660, 1045];
       freqs.forEach((freq, i) => {
@@ -1715,7 +1943,6 @@ function playFeedbackTone(type) {
       return;
     }
 
-    // 📦 Suara PRODUK: Satu beep pendek & tajam — konfirmasi kode produksi diterima
     if (type === 'product') {
       const osc  = _audioCtx.createOscillator();
       const gain = _audioCtx.createGain();
@@ -1731,7 +1958,6 @@ function playFeedbackTone(type) {
       return;
     }
 
-    // Tipe lainnya: ok / err / warn (tidak berubah)
     const osc  = _audioCtx.createOscillator();
     const gain = _audioCtx.createGain();
     const config = type === 'err'
@@ -1910,9 +2136,6 @@ function finishCurrentResi(source, nextResiCode) {
   S.log.unshift(row);
   document.getElementById('hdr-count').textContent = S.log.length + ' data';
   renderLogList();
-
-  // ✅ PERUBAHAN: RESI_DONE tidak dikirim ke spreadsheet (kodeProduksi kosong)
-  // addToPendingQueue sudah memfilter row tanpa kodeProduksi secara otomatis
 
   newResi();
   setMsg('Resi ' + activeResi + ' selesai dengan ' + scanCount + ' produk. Scan resi berikutnya.', 'ok');
